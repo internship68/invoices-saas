@@ -21,9 +21,9 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   try {
     await app.listen(port);
-    logger.log(`Backend listening on http://localhost:${port}/api/v1`);
+    logger.log(`Backend listening on port ${port} with prefix /api/v1`);
     if (process.env.DATABASE_URL) {
-      logger.log(`Using DATABASE_URL: ${process.env.DATABASE_URL.split("@")[1]}`);
+        logger.log("DATABASE_URL is configured.");
     } else {
       logger.warn("DATABASE_URL is not set. Database connection will fail.");
     }
