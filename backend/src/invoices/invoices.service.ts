@@ -6,6 +6,7 @@ import { InvoiceItem } from "./invoice-item.entity.js";
 import { Workspace } from "../workspaces/workspace.entity.js";
 import { Client } from "../clients/client.entity.js";
 import { Receipt } from "../receipts/receipt.entity.js";
+import { AppSettings } from "../settings/app-settings.entity.js";
 
 @Injectable()
 export class InvoicesService {
@@ -20,6 +21,8 @@ export class InvoicesService {
     private readonly clientsRepo: Repository<Client>,
     @InjectRepository(Receipt)
     private readonly receiptsRepo: Repository<Receipt>,
+    @InjectRepository(AppSettings)
+    private readonly settingsRepo: Repository<AppSettings>,
   ) {}
 
   async findAll(userId: string) {
@@ -47,6 +50,26 @@ export class InvoicesService {
     return {
       ...invoice,
       clientId: (invoice as any).client?.id,
+    };
+  }
+
+  async findPublicInvoice(id: string) {
+    const invoice = await this.invoicesRepo.findOne({
+      where: { id },
+      relations: ["items", "client", "workspace"],
+    });
+    if (!invoice) throw new NotFoundException();
+
+    const settings = await this.settingsRepo.findOne({
+      where: { workspace: { id: (invoice as any).workspace?.id } },
+    });
+
+    return {
+      invoice: {
+        ...invoice,
+        clientId: (invoice as any).client?.id,
+      },
+      settings: settings ?? null,
     };
   }
 

@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Download, Copy, CheckCircle2 } from "lucide-react";
 import { useInvoice, useMarkInvoicePaid } from "@/lib/useInvoices";
 import { useClients } from "@/lib/useClients";
+import { useSettings } from "@/lib/useSettings";
 import { formatCurrency } from "@/lib/calculations";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +25,7 @@ export default function InvoiceDetail() {
 
   const { data: invoice, isLoading } = useInvoice(id || "");
   const { data: clients = [] } = useClients();
+  const { data: settings } = useSettings();
   const markPaidMutation = useMarkInvoicePaid();
 
   if (isLoading) {
@@ -123,6 +125,17 @@ export default function InvoiceDetail() {
         {/* Header */}
         <div className="flex justify-between items-start mb-8">
           <div>
+            {settings?.companyName && <p className="text-sm font-semibold text-foreground">{settings.companyName}</p>}
+            {settings?.companyAddress && <p className="text-xs text-muted-foreground mt-1">{settings.companyAddress}</p>}
+            {(settings?.companyPhone || settings?.companyEmail) && (
+              <p className="text-xs text-muted-foreground">
+                {settings?.companyPhone ? settings.companyPhone : ""}
+                {settings?.companyPhone && settings?.companyEmail ? " • " : ""}
+                {settings?.companyEmail ? settings.companyEmail : ""}
+              </p>
+            )}
+            {settings?.companyTaxId && <p className="text-xs text-muted-foreground">Tax ID: {settings.companyTaxId}</p>}
+
             <h1 className="text-2xl font-bold text-foreground">ใบแจ้งหนี้</h1>
             <p className="text-lg font-semibold text-primary mt-1">{invoice.invoiceNumber}</p>
           </div>

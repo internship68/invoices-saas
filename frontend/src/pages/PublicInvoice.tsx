@@ -1,10 +1,11 @@
 import { useParams } from "react-router-dom";
-import { useInvoice } from "@/lib/useInvoices";
-import { useClients } from "@/lib/useClients";
+import { usePublicInvoice } from "@/lib/useInvoices";
+import { useSettings } from "@/lib/useSettings";
 import { formatCurrency } from "@/lib/calculations";
 import { Badge } from "@/components/ui/badge";
 import { QRCodeSVG } from "qrcode.react";
 import generatePayload from "promptpay-qr";
+import type { AppSettings, Client, Invoice } from "@/lib/types";
 
 const statusConfig = {
   draft: { label: "แบบร่าง", className: "bg-muted text-muted-foreground" },
@@ -14,8 +15,9 @@ const statusConfig = {
 
 export default function PublicInvoice() {
   const { id } = useParams();
-  const { data: invoice, isLoading } = useInvoice(id || "");
-  const { data: clients = [] } = useClients();
+  const { data, isLoading } = usePublicInvoice(id || "");
+  // ถ้าผู้ใช้ล็อกอินอยู่ ก็จะได้ settings จาก API ปกติด้วย (optional)
+  const { data: authedSettings } = useSettings();
 
   if (isLoading) {
     return (
@@ -25,7 +27,7 @@ export default function PublicInvoice() {
     );
   }
 
-  if (!invoice) {
+  if (!data?.invoice) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <p className="text-muted-foreground text-lg">ไม่พบใบแจ้งหนี้นี้</p>
@@ -33,11 +35,13 @@ export default function PublicInvoice() {
     );
   }
 
-  const client = clients.find((c) => c.id === invoice.clientId);
+  const invoice = data.invoice as Invoice;
+  const settings = (data.settings ?? authedSettings ?? null) as AppSettings | null;
+  const client = (invoice.client ?? null) as Client | null;
   const cfg = statusConfig[invoice.status];
 
   let promptPayQr: string | null = null;
-  if (invoice.promptPayId && invoice.status !== 'paid') {
+  if (invoice.promptPayId && invoice.status !== "paid") {
     try {
       promptPayQr = generatePayload(invoice.promptPayId, { amount: Number(invoice.amountDue) });
     } catch {
@@ -55,11 +59,31 @@ export default function PublicInvoice() {
           </Badge>
         </div>
 
-        <div className="bg-card rounded-xl border p-8" style={{ fontFamily: "'IBM Plex Sans Thai', 'Inter', sans-serif" }}>
+        <div
+          className="bg-card rounded-xl border p-8"
+          style={{ fontFamily: "'IBM Plex Sans Thai', 'Inter', sans-serif" }}
+        >
           {/* Header */}
           <div className="flex justify-between items-start mb-8">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">ใบแจ้งหนี้</h1>
+              {settings?.companyName && (
+                <p className="text-sm font-semibold text-foreground">{settings.companyName}</p>
+              )}
+              {settings?.companyAddress && (
+                <p className="text-xs text-muted-foreground mt-1">{settings.companyAddress}</p>
+              )}
+              {(settings?.companyPhone || settings?.companyEmail) && (
+                <p className="text-xs text-muted-foreground">
+                  {settings?.companyPhone ? settings.companyPhone : ""}
+                  {settings?.companyPhone && settings?.companyEmail ? " • " : ""}
+                  {settings?.companyEmail ? settings.companyEmail : ""}
+                </p>
+              )}
+              {settings?.companyTaxId && (
+                <p className="text-xs text-muted-foreground">Tax ID: {settings.companyTaxId}</p>
+              )}
+
+              <h1 className="text-2xl font-bold text-foreground mt-4">ใบแจ้งหนี้</h1>
               <p className="text-lg font-semibold text-primary mt-1">{invoice.invoiceNumber}</p>
             </div>
           </div>
@@ -70,6 +94,8 @@ export default function PublicInvoice() {
               <p className="text-xs uppercase text-muted-foreground font-medium mb-2">ลูกค้า</p>
               <p className="font-semibold">{client?.name || "-"}</p>
               {client?.company && <p className="text-sm text-muted-foreground">{client.company}</p>}
+              {client?.taxId && <p className="text-sm text-muted-foreground">Tax ID: {client.taxId}</p>}
+              {client?.address && <p className="text-sm text-muted-foreground">{client.address}</p>}
             </div>
             <div className="text-right">
               <p className="text-xs uppercase text-muted-foreground font-medium mb-2">รายละเอียด</p>
@@ -171,9 +197,18 @@ export default function PublicInvoice() {
           )}
         </div>
 
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          สร้างโดย BillFlow — ระบบจัดการใบแจ้งหนี้สำหรับฟรีแลนซ์
-        </p>
+        <div className="mt-6 flex items-center justify-center gap-3">
+          <button
+            className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+            onClick={() => window.print()}
+          >
+            Print / Save as PDF
+          </button>
+          <span className="text-muted-foreground">•</span>
+          <p className="text-center text-xs text-muted-foreground">
+            สร้างโดย InvoiceFlow
+          </p>
+        </div>
       </div>
     </div>
   );

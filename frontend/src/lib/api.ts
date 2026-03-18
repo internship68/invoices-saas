@@ -27,6 +27,25 @@ async function request(path: string, options: RequestInit = {}) {
   return res.json();
 }
 
+async function publicRequest(path: string, options: RequestInit = {}) {
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  };
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || res.statusText);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
 export const api = {
   get: <TRes = unknown>(path: string) =>
     request(path, { method: "GET" }) as Promise<TRes>,
@@ -36,5 +55,7 @@ export const api = {
     request(path, { method: "PUT", body: JSON.stringify(body) }) as Promise<TRes>,
   delete: <TRes = unknown>(path: string) =>
     request(path, { method: "DELETE" }) as Promise<TRes>,
+  publicGet: <TRes = unknown>(path: string) =>
+    publicRequest(path, { method: "GET" }) as Promise<TRes>,
 };
 

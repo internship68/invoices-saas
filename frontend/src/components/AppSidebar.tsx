@@ -32,14 +32,21 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarContent>
-        <div className="px-4 py-6">
+        <div className="px-4 py-6 flex items-center gap-2">
           {!collapsed && (
-            <h1 className="text-xl font-bold text-sidebar-foreground tracking-tight">
-              BillFlow
-            </h1>
+            <>
+              <div className="h-7 w-7 rounded-lg bg-gradient-to-tr from-primary to-emerald-400 flex items-center justify-center text-[13px] font-semibold text-white shadow-md shadow-primary/40">
+                IF
+              </div>
+              <h1 className="text-xl font-bold text-sidebar-foreground tracking-tight">
+                InvoiceFlow
+              </h1>
+            </>
           )}
           {collapsed && (
-            <span className="text-xl font-bold text-sidebar-foreground">B</span>
+            <div className="h-7 w-7 rounded-lg bg-gradient-to-tr from-primary to-emerald-400 flex items-center justify-center text-[13px] font-semibold text-white shadow-md shadow-primary/40">
+              IF
+            </div>
           )}
         </div>
 

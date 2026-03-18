@@ -17,6 +17,14 @@ export function useInvoice(id: string) {
   });
 }
 
+export function usePublicInvoice(id: string) {
+  return useQuery<{ invoice: Invoice; settings: unknown | null }>({
+    queryKey: ["public-invoices", id],
+    queryFn: () => api.publicGet(`/public/invoices/${id}`),
+    enabled: !!id,
+  });
+}
+
 export function useCreateInvoice() {
   const qc = useQueryClient();
   return useMutation({

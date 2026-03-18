@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Download } from "lucide-react";
 import { useReceipt } from "@/lib/useReceipts";
 import { useClients } from "@/lib/useClients";
+import { useSettings } from "@/lib/useSettings";
 import { formatCurrency } from "@/lib/calculations";
 import { Button } from "@/components/ui/button";
 import { useRef } from "react";
@@ -13,6 +14,7 @@ export default function ReceiptDetail() {
 
   const { data: receipt, isLoading } = useReceipt(id || "");
   const { data: clients = [] } = useClients();
+  const { data: settings } = useSettings();
 
   if (isLoading) {
     return (
@@ -63,6 +65,17 @@ export default function ReceiptDetail() {
       <div ref={printRef} className="bg-card rounded-xl border p-8" style={{ fontFamily: "'IBM Plex Sans Thai', 'Inter', sans-serif" }}>
         <div className="flex justify-between items-start mb-8">
           <div>
+            {settings?.companyName && <p className="text-sm font-semibold text-foreground">{settings.companyName}</p>}
+            {settings?.companyAddress && <p className="text-xs text-muted-foreground mt-1">{settings.companyAddress}</p>}
+            {(settings?.companyPhone || settings?.companyEmail) && (
+              <p className="text-xs text-muted-foreground">
+                {settings?.companyPhone ? settings.companyPhone : ""}
+                {settings?.companyPhone && settings?.companyEmail ? " • " : ""}
+                {settings?.companyEmail ? settings.companyEmail : ""}
+              </p>
+            )}
+            {settings?.companyTaxId && <p className="text-xs text-muted-foreground">Tax ID: {settings.companyTaxId}</p>}
+
             <h1 className="text-2xl font-bold text-foreground">ใบเสร็จรับเงิน</h1>
             <p className="text-lg font-semibold text-success mt-1">{receipt.receiptNumber}</p>
             <p className="text-sm text-muted-foreground mt-1">อ้างอิง: {receipt.invoiceNumber}</p>

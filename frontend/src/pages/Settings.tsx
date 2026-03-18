@@ -57,7 +57,9 @@ export default function Settings() {
     <div className="max-w-2xl mx-auto">
       <div className="page-header">
         <h1 className="page-title">ตั้งค่า</h1>
-        <p className="page-description">ตั้งค่าข้อมูลบริษัทและ PromptPay</p>
+        <p className="page-description">
+          ตั้งค่าข้อมูลบริษัทและ PromptPay ระบบอยู่ในช่วง Early Access — ใช้งานได้ฟรีเต็มฟีเจอร์สำหรับผู้ใช้งานชุดแรก
+        </p>
       </div>
 
       <div className="grid gap-6">
