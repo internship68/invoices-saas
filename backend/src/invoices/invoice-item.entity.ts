@@ -7,7 +7,7 @@ export class InvoiceItem {
   id!: string;
 
   @ManyToOne(() => Invoice, (invoice) => invoice.items, { nullable: false })
-  invoice!: any;
+  invoice!: Invoice;
 
   @Column({ type: "varchar" })
   description!: string;

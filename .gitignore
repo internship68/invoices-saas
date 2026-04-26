@@ -2,6 +2,9 @@ node_modules/
 dist/
 build/
 coverage/
+.turbo/
+.cache/
+*.tsbuildinfo
 
 # Logs
 npm-debug.log*
@@ -12,8 +15,16 @@ pnpm-debug.log*
 
 # Env
 .env
+.env.*
 frontend/.env
+frontend/.env.*
 backend/.env
+backend/.env.*
+**/.env
+**/.env.*
+!.env.example
+!backend/.env.example
+!frontend/.env.example
 
 # Editor / OS
 .vscode/

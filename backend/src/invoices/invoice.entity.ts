@@ -18,10 +18,10 @@ export class Invoice {
   id!: string;
 
   @ManyToOne(() => Workspace, (workspace) => workspace.invoices, { nullable: false })
-  workspace!: any;
+  workspace!: Workspace;
 
   @ManyToOne(() => Client, (client) => client.invoices, { nullable: false })
-  client!: any;
+  client!: Client;
 
   @OneToMany(() => InvoiceItem, (item) => item.invoice, { cascade: true })
   items!: InvoiceItem[];

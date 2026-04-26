@@ -3,10 +3,17 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Invoice } from "./invoice.entity.js";
 import { InvoiceItem } from "./invoice-item.entity.js";
-import { Workspace } from "../workspaces/workspace.entity.js";
 import { Client } from "../clients/client.entity.js";
 import { Receipt } from "../receipts/receipt.entity.js";
 import { AppSettings } from "../settings/app-settings.entity.js";
+import { WorkspaceAccessService } from "../workspaces/workspace-access.service.js";
+import { CreateInvoiceDto, UpdateInvoiceDto } from "./dto/invoice.dto.js";
+import type { Workspace } from "../workspaces/workspace.entity.js";
+
+type InvoiceWithRelations = Invoice & {
+  client: Client;
+  workspace?: Workspace;
+};
 
 @Injectable()
 export class InvoicesService {
@@ -15,18 +22,17 @@ export class InvoicesService {
     private readonly invoicesRepo: Repository<Invoice>,
     @InjectRepository(InvoiceItem)
     private readonly itemsRepo: Repository<InvoiceItem>,
-    @InjectRepository(Workspace)
-    private readonly workspacesRepo: Repository<Workspace>,
     @InjectRepository(Client)
     private readonly clientsRepo: Repository<Client>,
     @InjectRepository(Receipt)
     private readonly receiptsRepo: Repository<Receipt>,
     @InjectRepository(AppSettings)
     private readonly settingsRepo: Repository<AppSettings>,
+    private readonly workspaceAccessService: WorkspaceAccessService,
   ) {}
 
   async findAll(userId: string) {
-    const workspace = await this.workspacesRepo.findOne({ where: { owner: { id: userId } } });
+    const workspace = await this.workspaceAccessService.findByOwnerId(userId);
     if (!workspace) return [];
     const invoices = await this.invoicesRepo.find({
       where: { workspace: { id: workspace.id } },
@@ -35,13 +41,12 @@ export class InvoicesService {
     return invoices.map((inv) => ({
       ...inv,
       // ให้ frontend ใช้ clientId ได้ตรง ๆ
-      clientId: (inv as any).client?.id,
+      clientId: inv.client?.id,
     }));
   }
 
   async findOne(userId: string, id: string) {
-    const workspace = await this.workspacesRepo.findOne({ where: { owner: { id: userId } } });
-    if (!workspace) throw new NotFoundException();
+    const workspace = await this.workspaceAccessService.findByOwnerIdOrThrow(userId);
     const invoice = await this.invoicesRepo.findOne({
       where: { id, workspace: { id: workspace.id } },
       relations: ["items", "client"],
@@ -49,7 +54,7 @@ export class InvoicesService {
     if (!invoice) throw new NotFoundException();
     return {
       ...invoice,
-      clientId: (invoice as any).client?.id,
+      clientId: invoice.client?.id,
     };
   }
 
@@ -57,24 +62,24 @@ export class InvoicesService {
     const invoice = await this.invoicesRepo.findOne({
       where: { id },
       relations: ["items", "client", "workspace"],
-    });
+    }) as InvoiceWithRelations | null;
     if (!invoice) throw new NotFoundException();
 
     const settings = await this.settingsRepo.findOne({
-      where: { workspace: { id: (invoice as any).workspace?.id } },
+      where: { workspace: { id: invoice.workspace.id } },
     });
 
     return {
       invoice: {
         ...invoice,
-        clientId: (invoice as any).client?.id,
+        clientId: invoice.client?.id,
       },
       settings: settings ?? null,
     };
   }
 
-  async create(userId: string, data: any) {
-    const workspace = await this.getOrCreateWorkspace(userId);
+  async create(userId: string, data: CreateInvoiceDto) {
+    const workspace = await this.workspaceAccessService.getOrCreateByOwnerId(userId);
     const client = await this.clientsRepo.findOne({ where: { id: data.clientId, workspace: { id: workspace.id } } });
     if (!client) throw new NotFoundException("Client not found");
 
@@ -99,7 +104,7 @@ export class InvoicesService {
     });
     const saved = await this.invoicesRepo.save(invoice);
 
-    const items = data.items.map((it: any) =>
+    const items = data.items.map((it) =>
       this.itemsRepo.create({
         invoice: saved,
         description: it.description,
@@ -116,13 +121,12 @@ export class InvoicesService {
     });
     return {
       ...withRelations!,
-      clientId: (withRelations as any)?.client?.id,
+      clientId: withRelations?.client?.id,
     };
   }
 
-  async update(userId: string, id: string, data: any) {
-    const workspace = await this.workspacesRepo.findOne({ where: { owner: { id: userId } } });
-    if (!workspace) throw new NotFoundException();
+  async update(userId: string, id: string, data: UpdateInvoiceDto) {
+    const workspace = await this.workspaceAccessService.findByOwnerIdOrThrow(userId);
     const invoice = await this.invoicesRepo.findOne({
       where: { id, workspace: { id: workspace.id } },
       relations: ["items", "client"],
@@ -131,7 +135,7 @@ export class InvoicesService {
 
     if (data.items) {
       await this.itemsRepo.delete({ invoice: { id: invoice.id } });
-      const items = data.items.map((it: any) =>
+      const items = data.items.map((it) =>
         this.itemsRepo.create({
           invoice,
           description: it.description,
@@ -165,13 +169,12 @@ export class InvoicesService {
     });
     return {
       ...withRelations!,
-      clientId: (withRelations as any)?.client?.id,
+      clientId: withRelations?.client?.id,
     };
   }
 
   async remove(userId: string, id: string) {
-    const workspace = await this.workspacesRepo.findOne({ where: { owner: { id: userId } } });
-    if (!workspace) throw new NotFoundException();
+    const workspace = await this.workspaceAccessService.findByOwnerIdOrThrow(userId);
     const invoice = await this.invoicesRepo.findOne({ where: { id, workspace: { id: workspace.id } } });
     if (!invoice) throw new NotFoundException();
     await this.invoicesRepo.remove(invoice);
@@ -179,8 +182,7 @@ export class InvoicesService {
   }
 
   async markPaid(userId: string, id: string) {
-    const workspace = await this.workspacesRepo.findOne({ where: { owner: { id: userId } } });
-    if (!workspace) throw new NotFoundException();
+    const workspace = await this.workspaceAccessService.findByOwnerIdOrThrow(userId);
     const invoice = await this.invoicesRepo.findOne({
       where: { id, workspace: { id: workspace.id } },
       relations: ["items", "client"],
@@ -206,17 +208,8 @@ export class InvoicesService {
     });
     return {
       ...withRelations!,
-      clientId: (withRelations as any)?.client?.id,
+      clientId: withRelations?.client?.id,
     };
-  }
-
-  private async getOrCreateWorkspace(userId: string) {
-    let workspace = await this.workspacesRepo.findOne({ where: { owner: { id: userId } } });
-    if (!workspace) {
-      workspace = this.workspacesRepo.create({ name: "My Workspace", owner: { id: userId } as any });
-      workspace = await this.workspacesRepo.save(workspace);
-    }
-    return workspace;
   }
 
   private async generateInvoiceNumber(workspaceId: string): Promise<string> {

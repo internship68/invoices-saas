@@ -15,10 +15,14 @@ import { InvoicesModule } from "./invoices/invoices.module.js";
 import { ReceiptsModule } from "./receipts/receipts.module.js";
 import { SettingsModule } from "./settings/settings.module.js";
 import { WorkspacesModule } from "./workspaces/workspaces.module.js";
+import { validateEnv } from "./config/env.validation.js";
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: validateEnv,
+    }),
     TypeOrmModule.forRootAsync({
       useFactory: () => ({
         type: "postgres",

@@ -1,3 +1,3 @@
-# Welcome to your Lovable project
+# Frontend Notes
 
-TODO: Document your project here
+Project-wide documentation now lives in the root `README.md`.
